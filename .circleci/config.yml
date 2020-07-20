@@ -3,8 +3,8 @@ jobs:
   build:
     docker:
       - image: myriadeinc/node-ci:latest
-      environment:
-        emerald__host: emerald
+        environment:
+          emerald__host: emerald
     steps:
       - checkout
       - setup_remote_docker:
