@@ -4,10 +4,13 @@ orbs:
 jobs:
   build-and-test:
     executor:
-      name: node/default
+      shadowstone-executor:
+        docker:
+          - image: myriadeinc/node-ci:latest
     steps:
       - checkout
       - node/with-cache:
+          executor: shadowstone-executor
           steps:
             - run: npm install
             - run:
