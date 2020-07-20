@@ -1,0 +1,27 @@
+version: 2.1
+orbs:
+  node: circleci/node@1.1.6
+jobs:
+  build-and-test:
+    executor:
+      name: node/default
+    steps:
+      - checkout
+      - node/with-cache:
+          steps:
+            - run: npm install
+            - run:
+                name: Build Docker image
+                command: |
+                  echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+                  TAG=$(git show -s --pretty=%H) make build
+            - deploy:
+                name: Push & deploy build
+                command: |
+                  if [ "${CIRCLE_BRANCH}" == "master" ]; then
+                  docker push myriadeinc/shadowstone:$(git show -s --pretty=%H)
+                  fi
+workflows:
+    build-and-test:
+      jobs:
+        - build-and-test
