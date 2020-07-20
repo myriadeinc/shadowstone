@@ -1,13 +1,16 @@
-version: 2.1
-orbs:
-  node: circleci/node@1.1.6
+version: 2
 jobs:
   build-and-test:
     docker:
       - image: myriadeinc/node-ci:latest
     steps:
       - checkout
-      - run: npm install
+      - setup_remote_docker:
+          version: 18.06.0-ce
+      - run:
+          name: Installing dev dependencies
+          command: |
+            npm install
       - run:
           name: Build Docker image
           command: |
