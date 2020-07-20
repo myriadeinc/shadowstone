@@ -1,0 +1,30 @@
+{
+  "name": "shadowstone",
+  "version": "0.1.0",
+  "description": "Another proxy client for emerald",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "node src/main.js",
+    "start:dev": "nodemon --inspect=0.0.0.0:9123 -L src/main.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "proxy",
+    "tcp"
+  ],
+  "author": "Myriade Inc",
+  "license": "Copyright",
+  "dependencies": {
+    "app-module-path": "^2.2.0",
+    "bunyan": "^1.8.14",
+    "bunyan-formatter": "^1.0.0",
+    "express": "^4.17.1",
+    "jayson": "^3.3.3",
+    "json-rpc-client": "^0.2.2",
+    "nconf": "^0.10.0",
+    "path": "^0.12.7"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.4"
+  }
+}

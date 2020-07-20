@@ -1,0 +1,16 @@
+version: '2.1'
+services:
+  shadowstone:
+    extends:
+      file: config.yml
+      service: shadowstone
+    build:
+      context: ${SHADOWSTONE_DIR}
+      dockerfile: Dockerfile.dev
+    command: ["bash", "-c", "npm install --quiet && npm run start:dev"]
+    volumes:
+      - ${SHADOWSTONE_DIR}:/usr/src/app:rw
+    ports:
+      - "12345:12345"
+      - "9990:9990"
+      - "9123:9123"
