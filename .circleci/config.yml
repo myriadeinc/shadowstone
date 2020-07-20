@@ -3,27 +3,22 @@ orbs:
   node: circleci/node@1.1.6
 jobs:
   build-and-test:
-    executor:
-      shadowstone-executor:
-        docker:
-          - image: myriadeinc/node-ci:latest
+    docker:
+      - image: myriadeinc/node-ci:latest
     steps:
       - checkout
-      - node/with-cache:
-          executor: shadowstone-executor
-          steps:
-            - run: npm install
-            - run:
-                name: Build Docker image
-                command: |
-                  echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
-                  TAG=$(git show -s --pretty=%H) make build
-            - deploy:
-                name: Push & deploy build
-                command: |
-                  if [ "${CIRCLE_BRANCH}" == "master" ]; then
-                  docker push myriadeinc/shadowstone:$(git show -s --pretty=%H)
-                  fi
+      - run: npm install
+      - run:
+          name: Build Docker image
+          command: |
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            TAG=$(git show -s --pretty=%H) make build
+      - deploy:
+          name: Push & deploy build
+          command: |
+            if [ "${CIRCLE_BRANCH}" == "master" ]; then
+            docker push myriadeinc/shadowstone:$(git show -s --pretty=%H)
+            fi
 workflows:
     build-and-test:
       jobs:
