@@ -1,8 +1,10 @@
 version: 2
 jobs:
-  build-and-test:
+  build:
     docker:
       - image: myriadeinc/node-ci:latest
+      environment:
+        emerald__host: emerald
     steps:
       - checkout
       - setup_remote_docker:
@@ -22,7 +24,3 @@ jobs:
             if [ "${CIRCLE_BRANCH}" == "master" ]; then
             docker push myriadeinc/shadowstone:$(git show -s --pretty=%H)
             fi
-workflows:
-    build-and-test:
-      jobs:
-        - build-and-test
