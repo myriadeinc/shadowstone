@@ -16,6 +16,17 @@ const proxyServer = net.createServer();
 // Command Server
 const rpc_client = require('json-rpc-client');
 
+const errorMessage =
+    `
+    {
+      "id": 1,
+      "jsonrpc": "2.0",
+      "error": {
+        "code": -1,
+        "message": "Invalid data provided"
+      }
+    } \n`;
+
 // Use a simple client here, no need for anything verbose yet
 var c = new rpc_client({
     port: 22345,
@@ -53,41 +64,83 @@ app.get("/hc", async (req, res) => {
     return res.status(200).send('OK');
 })
 proxyServer.on('connection', async (socket) => {
+    socket.setEncoding('utf8')
+    socket.setKeepAlive(true)
+    // I hate this method but we need to properly filter raw tcp messages
     socket.on('data', async (data) => {
-        try {
-            const raw = JSON.parse(data.toString())
-            if (raw.method == 'login') {
-                socket.minerId = raw.params.login;
-                sockets.push(socket);
-            }
-            let reply = {}
-            switch (raw.method) {
-                case 'login':
-                    reply = await c.send(raw.method, raw.params);
-                    break;
-                case 'submit':
-                    reply = await c.send(raw.method, raw.params);
-                    break;
-                case 'keepalived':
-                    reply = await c.send(raw.method, raw.params);
-                    break;
-                default:
-                    reply = { error: 'ahhhh' }
-            }
-            // Newline is required!
-            socket.write(JSON.stringify(reply) + "\n")
-            if (debugMode) {
-                logger.core.info(`Data on : ${socket.remoteAddress}`)
-            }
+        // Remove literal newlines with actual 
+        const regex = /[\n]+/g
+        // 100KB limit
+        if (Buffer.byteLength(data) > 102400) {
+            logger.core.info("Data overflow!")
+            return socket.destroy();
         }
-        catch (err) {
-            logger.core.info(err)
+
+        // Split by newlines
+        let messages = data.toString().replace(regex, '\n').split('\n');
+        // In case of multiple JSON messages sent, we will have to fold into array
+        if (debugMode) {
+            logger.core.info(`Data on : ${socket.remoteAddress}`)
         }
+        messages.map(async message => {
+            if (message == '') {
+                // Skip blanks
+                return;
+            }
+            console.log('====================== INCOMING MESSAGE')
+            console.dir(message)
+            try {
+                // If we can't parse, fail immediately
+                const raw = JSON.parse(message)
+                if (raw.method == 'login') {
+                    socket.minerId = raw.params.login;
+                    sockets.push(socket);
+                }
+                let reply = {}
+                switch (raw.method) {
+                    case 'login':
+                        reply = await c.send(raw.method, raw.params);
+                        break;
+                    case 'submit':
+                        reply = await c.send(raw.method, raw.params);
+                        break;
+                    case 'keepalived':
+                        reply = await c.send(raw.method, raw.params);
+                        break;
+                    default:
+                        reply = { error: 'Client error: no specified method call' }
+                }
+                reply.id = raw.id;
+                logger.core.info(`Sending reply:`)
+                console.dir(reply)
+                // Newline is required!
+                socket.write(JSON.stringify(reply) + "\n")
+            }
+            catch (err) {
+                logger.core.info(err)
+                logger.core.info(message)
+                socket.write(errorMessage)
+            }
+        })
+
+
     })
     socket.on('error', () => {
+        logger.core.info('Disconnecting user due to error!')
         // Yes, this is bad since it is essentially O(n) time
-        sockets = sockets.filter(s => s == socket)
+        // sockets = sockets.filter(s => s == socket)
     })
+    socket.on('close', () => {
+        logger.core.info('Disconnecting user due to close!')
+        // Yes, this is bad since it is essentially O(n) time
+        // sockets = sockets.filter(s => s == socket)
+    })
+    socket.on('end', () => {
+        logger.core.info('Disconnecting user due to end event!')
+        // Yes, this is bad since it is essentially O(n) time
+        // sockets = sockets.filter(s => s == socket)
+    })
+
 });
 
 async function main() {
