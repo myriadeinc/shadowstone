@@ -10,7 +10,7 @@ const net = require('net');
 const host = '0.0.0.0';
 const proxyPort = config.get("proxy:port") || 12345;
 const commandPort = config.get("command:port") || 9990
-let debugMode = true;
+let debugMode = false;
 // Proxy
 const proxyServer = net.createServer();
 // Command Server
@@ -36,7 +36,7 @@ var c = new rpc_client({
 let sockets = [];
 async function jobRefresh() {
     return sockets.map(async (socket) => {
-        console.log(`Sending info for ${socket.minerId}`);
+        console.log(`Sending Job Refresh for ${socket.minerId}`);
         const minerId = socket.minerId;
         try {
             const jobData = await c.send('login', {
@@ -82,13 +82,13 @@ proxyServer.on('connection', async (socket) => {
         if (debugMode) {
             logger.core.info(`Data on : ${socket.remoteAddress}`)
         }
-        messages.map(async message => {
+        for await (message of messages) {
             if (message == '') {
                 // Skip blanks
                 return;
             }
-            console.log('====================== INCOMING MESSAGE')
-            console.dir(message)
+            // logger.core.info('====================== INCOMING MESSAGE =========================')
+            // logger.core.info(message)
             try {
                 // If we can't parse, fail immediately
                 const raw = JSON.parse(message)
@@ -105,14 +105,14 @@ proxyServer.on('connection', async (socket) => {
                         reply = await c.send(raw.method, raw.params);
                         break;
                     case 'keepalived':
-                        reply = await c.send(raw.method, raw.params);
+                        reply = { error: 'Client error: unsupported method call' }// await c.send(raw.method, raw.params);
                         break;
                     default:
                         reply = { error: 'Client error: no specified method call' }
                 }
                 reply.id = raw.id;
-                logger.core.info(`Sending reply:`)
-                console.dir(reply)
+                reply.jsonrpc = "2.0";
+
                 // Newline is required!
                 socket.write(JSON.stringify(reply) + "\n")
             }
@@ -121,22 +121,22 @@ proxyServer.on('connection', async (socket) => {
                 logger.core.info(message)
                 socket.write(errorMessage)
             }
-        })
+        }
 
 
     })
     socket.on('error', () => {
-        logger.core.info('Disconnecting user due to error!')
+        logger.core.info(`Error at ${socket.localAddress}:${socket.remotePort}`)
         // Yes, this is bad since it is essentially O(n) time
         // sockets = sockets.filter(s => s == socket)
     })
     socket.on('close', () => {
-        logger.core.info('Disconnecting user due to close!')
+        // logger.core.info(`Close event at ${socket.localAddress}:${socket.remotePort}`)
         // Yes, this is bad since it is essentially O(n) time
         // sockets = sockets.filter(s => s == socket)
     })
     socket.on('end', () => {
-        logger.core.info('Disconnecting user due to end event!')
+        // logger.core.info('Disconnecting user due to end event!')
         // Yes, this is bad since it is essentially O(n) time
         // sockets = sockets.filter(s => s == socket)
     })
